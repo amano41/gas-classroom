@@ -7,6 +7,7 @@ function onOpen() {
   const ui = SpreadsheetApp.getUi();
   const menu = ui.createMenu("授業管理");
   menu.addItem("授業回の追加", "createNewLesson");
+  menu.addSeparator();
   menu.addItem("クラス一覧の更新", "listAllCourses");
   menu.addSeparator();
   menu.addItem("未提出ファイルの掃除", "removeUnsubmittedFiles");
@@ -90,25 +91,42 @@ function createNewLesson() {
   }
 
   // 授業回数
-  const lessonNumber = Browser.inputBox("授業の回数を 00 形式で入力してください。");
+  const lessonNumber = Browser.inputBox("授業回を 00 形式で入力してください。");
   if (lessonNumber === "cancel") {
-    console.log("Canceled.");
+    Browser.msgBox("実行を中止します。");
     return;
   }
 
   // タイトル
   const lessonTitle = Browser.inputBox("授業のタイトルを入力してください。");
   if (lessonTitle === "cancel") {
-    console.log("Canceled.");
+    Browser.msgBox("実行を中止します。");
     return;
   }
 
   // 実施日
   const lessonDate = Browser.inputBox("授業の実施日を YYYY/MM/DD 形式で入力してください。");
   if (lessonDate === "cancel") {
-    console.log("Canceled.");
+    Browser.msgBox("実行を中止します。");
     return
   }
+
+  // Slido Event Code
+  const eventCode = Browser.inputBox("Slido のイベントコードを入力してください。");
+  if (eventCode === "cancel") {
+    Browser.msgBox("実行を中止します。");
+    return
+  }
+
+  // Slido Event URL
+  const eventURL = Browser.inputBox("Slido のイベント URL を入力してください。");
+  if (eventURL === "cancel") {
+    Browser.msgBox("実行を中止します。");
+    return
+  }
+
+  // 授業回の教材フォルダ
+  const lessonFolder = getFolderByPath(lessonNumber, getMaterialsFolder());
 
   // 出席確認フォームのコピー
   copyAttendanceForm(lessonNumber);
@@ -117,10 +135,10 @@ function createNewLesson() {
   for (let row = COURSES_LIST_ROW; row < lastRow + 1; row++) {
 
     const courseName = sheet.getRange(row, 1).getValue();
-    console.log("Course: %s", courseName);
-
     const courseId = sheet.getRange(row, 3).getValue();
     const startTime = sheet.getRange(row, 2).getDisplayValue();
+
+    console.log("Course: %s (%s)", courseName, courseId);
 
     // 予約投稿時間は授業開始 10 分前
     const scheduledDate = new Date(lessonDate + " " + startTime);
@@ -134,24 +152,144 @@ function createNewLesson() {
     const attendanceDue = new Date(lessonDate + " " + startTime);
     attendanceDue.setMinutes(attendanceDue.getMinutes() + 30);
 
-    // トピック作成
+    // トピックの作成
     const topicName = lessonNumber + " - " + lessonTitle
     topicId = createTopic(courseId, topicName);
 
     // 資料の作成
-    createCourseWorkMaterial(courseId, topicId, "Slido", "", scheduledDate);
-    createCourseWorkMaterial(courseId, topicId, "参考資料", "", scheduledDate);
-    createCourseWorkMaterial(courseId, topicId, "授業資料", "", scheduledDate);
-    createCourseWorkMaterial(courseId, topicId, "課題" + lessonNumber + "：チェックデータ", "", scheduledDate);
-    createCourseWorkMaterial(courseId, topicId, "課題" + lessonNumber + "：解答例", "", scheduledDate);
+    createSlido(courseId, topicId, scheduledDate, lessonFolder, eventCode, eventURL);
+    createMaterial(courseId, topicId, "参考資料", "", scheduledDate, lessonFolder, "参考資料");
+    createMaterial(courseId, topicId, "授業資料", "", scheduledDate, lessonFolder, "授業資料");
+    createMaterial(courseId, topicId, "課題" + lessonNumber + "：チェックデータ", "", scheduledDate, lessonFolder, "課題/チェックデータ");
+    createMaterial(courseId, topicId, "課題" + lessonNumber + "：解答例", "", scheduledDate, lessonFolder, "課題/解答例");
 
     // 課題の作成
-    createCourseWork(courseId, topicId, "課題" + lessonNumber, "", assignmentDue, scheduledDate);
+    createAssignment(courseId, topicId, assignmentDue, scheduledDate, lessonFolder);
 
     // 出席確認の作成
-    createCourseWork(courseId, topicId, "出席確認" + lessonNumber, "", attendanceDue, scheduledDate);
+    createAttendance(courseId, topicId, attendanceDue, scheduledDate, lessonFolder);
   }
 
+  Browser.msgBox("第 " + lessonNumber + " 回　" + lessonTitle + "　（" + lessonDate + "）の作成が完了しました！");
+}
+
+
+/**
+ * 指定したフォルダの内容から資料を作成する
+ */
+function createMaterial(courseId, topicId, title, description, scheduledDate, lessonFolder, sourceFolderPath = "資料") {
+
+  const sourceFolder = getFolderByPath(sourceFolderPath, lessonFolder);
+  if (!sourceFolder) {
+    Browser.msgBox("フォルダ '" + lessonFolder.getName() + "/" + sourceFolderPath + "' が見つかりません。");
+    return;
+  }
+
+  let attachments = [];
+  const files = sourceFolder.getFiles();
+  while (files.hasNext()) {
+    attachments.push(files.next());  // まずはファイル自体を格納
+  }
+
+  // 大文字・小文字の違いを無視してファイル名の順に並び替える
+  attachments = attachments.sort((a, b) => {
+    return (a.getName().toLowerCase() > b.getName().toLowerCase()) ? 1 : -1;
+  });
+
+  // ファイル ID の配列に変換する
+  attachments = attachments.map(v => v.getId());
+
+  createCourseWorkMaterial(courseId, topicId, title, description, scheduledDate, attachments);
+}
+
+
+/**
+ * 指定したフォルダの内容から課題を作成する
+ */
+function createAssignment(courseId, topicId, dueDate, scheduledDate, lessonFolder, sourceFolderPath = "課題") {
+
+  const lessonNumber = lessonFolder.getName();
+
+  // 課題フォルダ
+  const sourceFolder = getFolderByPath(sourceFolderPath, lessonFolder);
+  if (!sourceFolder) {
+    Browser.msgBox("フォルダ '" + lessonNumber + "/" + sourceFolderPath + "' が見つかりません。");
+    return;
+  }
+
+  // 指示用ファイル
+  const fileName = "課題" + lessonNumber + ".pdf";
+  const fileId = getFileIdByPath(fileName, sourceFolder);
+  if (!fileId) {
+    Browser.msgBox("ファイル '" + fileName + "' が見つかりません。");
+    return;
+  }
+
+  // 解答用ファイルがなければ指示用ファイルだけを添付して終了
+  const supplementFolder = getFolderByPath("解答用ファイル", sourceFolder);
+  if (!supplementFolder) {
+    console.log("No supplement files.");
+    createCourseWork(courseId, topicId, "課題" + lessonNumber, "", dueDate, scheduledDate, [fileId]);
+    return;
+  }
+
+  // 解答用ファイルを添付
+  let attachments = [];
+  const files = supplementFolder.getFiles();
+  while (files.hasNext()) {
+    attachments.push(files.next());  // まずはファイル自体を格納
+  }
+
+  // 大文字・小文字の違いを無視してファイル名の順に並び替える
+  attachments = attachments.sort((a, b) => {
+    return (a.getName().toLowerCase() > b.getName().toLowerCase()) ? 1 : -1;
+  });
+
+  // ファイル ID の配列に変換する
+  attachments = attachments.map(v => v.getId());
+
+  // 指示用ファイルは常に先頭
+  attachments.unshift(fileId);
+
+  createCourseWork(courseId, topicId, "課題" + lessonNumber, "", dueDate, scheduledDate, attachments);
+}
+
+
+/**
+ * 出席確認フォームの課題を作成する
+ */
+function createAttendance(courseId, topicId, dueDate, scheduledDate, lessonFolder) {
+
+  const lessonNumber = lessonFolder.getName();
+
+  const attendanceFile = getFileByPath("出席確認" + lessonNumber, lessonFolder);
+  if (!attendanceFile) {
+    Browser.msgBox("フォーム '出席確認" + lessonNumber + "' が見つかりません。");
+    return;
+  }
+
+  createCourseWork(courseId, topicId, "出席確認" + lessonNumber, "", dueDate, scheduledDate, [attendanceFile.getUrl()]);
+}
+
+
+/**
+ * Slido のリンク資料を作成する
+ */
+function createSlido(courseId, topicId, scheduledDate, lessonFolder, eventCode, eventURL) {
+
+  const description = "#" + eventCode;
+
+  const attachments = [eventURL];
+  const lessonNumber = lessonFolder.getName();
+  const qrcode = getFileIdByPath("slido" + lessonNumber + ".png", lessonFolder);
+  if (qrcode === null) {
+    Browser.msgBox("Slido の QR コードが見つかりません。");
+  }
+  else {
+    attachments.push(qrcode);
+  }
+
+  createCourseWorkMaterial(courseId, topicId, "Slido", description, scheduledDate, attachments);
 }
 
 
@@ -389,7 +527,7 @@ function copyAttendanceForm(lessonNumber) {
   // 出席確認フォームのテンプレート
   const templateFile = getFileByPath("Template/出席確認", materialsFolder);
   if (!templateFile) {
-    console.log("Template File Not Found: 出席確認");
+    console.log("Template file not found: 出席確認");
     return;
   }
 
@@ -397,7 +535,7 @@ function copyAttendanceForm(lessonNumber) {
   let lessonFolder = getFolderByPath(lessonNumber, materialsFolder);
   if (!lessonFolder) {
     lessonFolder = materialsFolder.createFolder(lessonNumber);
-    console.log("Lesson Folder Created: %s", lessonNumber);
+    console.log("Lesson folder created: %s", lessonNumber);
   }
 
   // コピー
@@ -467,7 +605,7 @@ function removeUnsubmittedFiles() {
 
     // Classroom のフォルダが取得できているか確認
     if (!folderPath.match("/Classroom/")) {
-      Browser.msgBox("Invalid Folder: " + folderPath);
+      Browser.msgBox("Invalid folder: " + folderPath);
       return;
     }
 
