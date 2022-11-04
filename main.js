@@ -262,6 +262,17 @@ function getFileIdByPath(filePath, baseFolder = null) {
   }
 }
 
+
+/**
+ * 教材フォルダを取得
+ */
+function getMaterialsFolder() {
+  const sheet = SpreadsheetApp.getActiveSheet();
+  const materialsFolderId = sheet.getRange(MATERIALS_FOLDER_ROW, 2).getValue();
+  return DriveApp.getFolderById(materialsFolderId);
+}
+
+
 /**
  * 出席確認フォームのコピー
  */
