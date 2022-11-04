@@ -156,6 +156,113 @@ function createNewLesson() {
 
 
 /**
+ * パスからフォルダを取得
+ */
+function getFolderByPath(folderPath, baseFolder = null) {
+
+  const parts = folderPath.split("/");
+  while (parts[0] === "" || parts[0] === "マイドライブ") {
+    parts.shift();
+  }
+
+  let folder = baseFolder || DriveApp.getRootFolder();
+
+  while (parts.length > 0) {
+
+    const target = parts.shift();
+    if (target === "") {
+      continue
+    }
+
+    const folders = folder.getFoldersByName(target);
+    if (folders.hasNext()) {
+      folder = folders.next();
+    }
+    else {
+      console.log("Folder '%s' not found in '%s'", target, folder);
+      return null;
+    }
+  }
+
+  return folder;
+}
+
+
+/**
+ * パスからフォルダの ID を取得
+ */
+function getFolderIdByPath(folderPath, baseFolder = null) {
+  const folder = getFolderByPath(folderPath, baseFolder);
+  if (folder) {
+    return folder.getId();
+  }
+  else {
+    return null;
+  }
+}
+
+
+/**
+ * パスからファイルを取得
+ */
+function getFileByPath(filePath, baseFolder = null) {
+
+  const parts = filePath.split("/");
+  while (parts[0] === "" || parts[0] === "マイドライブ") {
+    parts.shift();
+  }
+
+  let folder = baseFolder || DriveApp.getRootFolder();
+
+  while (parts.length > 0) {
+
+    const target = parts.shift();
+    if (target === "") {
+      continue
+    }
+
+    // パス要素が残っていれば途中のフォルダ
+    if (parts.length > 0) {
+      const folders = folder.getFoldersByName(target);
+      if (folders.hasNext()) {
+        folder = folders.next();
+      }
+      else {
+        console.log("Folder '%s' not found in '%s'", target, folder);
+        return null;
+      }
+    }
+    // 最後のパス要素であれば目的のファイル
+    else {
+      const files = folder.getFilesByName(target);
+      if (files.hasNext()) {
+        return files.next();
+      }
+      else {
+        console.log("File '%s' not found in '%s'", target, folder);
+        return null;
+      }
+    }
+  }
+
+  return null;
+}
+
+
+/**
+ * パスからファイルの ID を取得
+ */
+function getFileIdByPath(filePath, baseFolder = null) {
+  const file = getFileByPath(filePath, baseFolder);
+  if (file) {
+    return file.getId();
+  }
+  else {
+    return null;
+  }
+}
+
+/**
  * 出席確認フォームのコピー
  */
 function copyAttendanceForm(lessonNumber) {
