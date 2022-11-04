@@ -14,6 +14,22 @@ function onOpen() {
 }
 
 
+function debug_listCourses(states = ["ACTIVE"]) {
+  const response = Classroom.Courses.list({ "courseStates": states });
+  for (const course of response.courses) {
+    console.log("course: %s (%s)", course.name, course.id);
+  }
+}
+
+
+function debug_listTopics(courseId) {
+  const response = Classroom.Courses.Topics.list(courseId);
+  for (const topic of response.topic) {
+    console.log("topic: %s (%s)", topic.name, topic.topicId);
+  }
+}
+
+
 /**
  * クラス一覧を取得
  */
