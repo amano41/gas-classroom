@@ -274,59 +274,6 @@ function getMaterialsFolder() {
 
 
 /**
- * 出席確認フォームのコピー
- */
-function copyAttendanceForm(lessonNumber) {
-
-  const sheet = SpreadsheetApp.getActiveSheet();
-  const materialsFolderId = sheet.getRange(MATERIALS_FOLDER_ROW, 2).getValue();
-
-  // Template フォルダ
-  const materialsFolder = DriveApp.getFolderById(materialsFolderId);
-  let folders = materialsFolder.getFoldersByName("Template")
-  if (!folders.hasNext()) {
-    console.log("Not Found: Template フォルダ")
-    return;
-  }
-
-  // 出席確認フォームのテンプレート
-  const templateFolder = folders.next();
-  const files = templateFolder.getFilesByName("出席確認");
-  if (!files.hasNext()) {
-    console.log("Not Found: 出席確認フォーム")
-    return;
-  }
-  const formTemplate = files.next();
-
-  // コピー先となる授業回フォルダ
-  folders = materialsFolder.getFoldersByName(lessonNumber);
-  if (folders.hasNext()) {
-    lessonFolder = folders.next();
-  }
-  else {
-    lessonFolder = materialsFolder.createFolder(lessonNumber);
-    console.log("Folder Created: %s", lessonNumber);
-  }
-
-  // コピー
-  const fileName = "出席確認" + lessonNumber
-  const copiedFile = formTemplate.makeCopy(fileName, lessonFolder);
-  const form = FormApp.openById(copiedFile.getId());
-  form.setTitle(fileName);
-
-  // 回答先をスプレッドシートにする
-  const destSheet = SpreadsheetApp.create(fileName + "（回答）");
-  SpreadsheetApp.flush();
-  const sheetFile = DriveApp.getFileById(destSheet.getId());
-  sheetFile.moveTo(lessonFolder);
-  form.setDestination(FormApp.DestinationType.SPREADSHEET, destSheet.getId());
-  destSheet.deleteSheet(destSheet.getSheetByName("シート1"));
-
-  console.log("Attendance forms created: 出席確認%s", lessonNumber);
-}
-
-
-/**
  * トピックの作成
  */
 function createTopic(courseId, topicName) {
@@ -429,6 +376,59 @@ function createCourseWork(courseId, topicId, title, description, dueDate, schedu
   const response = Classroom.Courses.CourseWork.create(resource, courseId);
   console.log("Assignment created: %s", title);
   return response;
+}
+
+
+/**
+ * 出席確認フォームのコピー
+ */
+function copyAttendanceForm(lessonNumber) {
+
+  const sheet = SpreadsheetApp.getActiveSheet();
+  const materialsFolderId = sheet.getRange(MATERIALS_FOLDER_ROW, 2).getValue();
+
+  // Template フォルダ
+  const materialsFolder = DriveApp.getFolderById(materialsFolderId);
+  let folders = materialsFolder.getFoldersByName("Template")
+  if (!folders.hasNext()) {
+    console.log("Not Found: Template フォルダ")
+    return;
+  }
+
+  // 出席確認フォームのテンプレート
+  const templateFolder = folders.next();
+  const files = templateFolder.getFilesByName("出席確認");
+  if (!files.hasNext()) {
+    console.log("Not Found: 出席確認フォーム")
+    return;
+  }
+  const formTemplate = files.next();
+
+  // コピー先となる授業回フォルダ
+  folders = materialsFolder.getFoldersByName(lessonNumber);
+  if (folders.hasNext()) {
+    lessonFolder = folders.next();
+  }
+  else {
+    lessonFolder = materialsFolder.createFolder(lessonNumber);
+    console.log("Folder Created: %s", lessonNumber);
+  }
+
+  // コピー
+  const fileName = "出席確認" + lessonNumber
+  const copiedFile = formTemplate.makeCopy(fileName, lessonFolder);
+  const form = FormApp.openById(copiedFile.getId());
+  form.setTitle(fileName);
+
+  // 回答先をスプレッドシートにする
+  const destSheet = SpreadsheetApp.create(fileName + "（回答）");
+  SpreadsheetApp.flush();
+  const sheetFile = DriveApp.getFileById(destSheet.getId());
+  sheetFile.moveTo(lessonFolder);
+  form.setDestination(FormApp.DestinationType.SPREADSHEET, destSheet.getId());
+  destSheet.deleteSheet(destSheet.getSheetByName("シート1"));
+
+  console.log("Attendance forms created: 出席確認%s", lessonNumber);
 }
 
 
