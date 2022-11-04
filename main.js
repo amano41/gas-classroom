@@ -342,7 +342,7 @@ function createTopic(courseId, topicName) {
 /**
  * 資料の作成
  */
-function createCourseWorkMaterial(courseId, topicId, title, description, scheduledDate, fileId = null) {
+function createCourseWorkMaterial(courseId, topicId, title, description, scheduledDate, attachments = []) {
 
   const scheduledTime = Utilities.formatDate(scheduledDate, "UTC", "yyyy-MM-dd'T'HH:mm:ss'Z'")
 
@@ -351,26 +351,37 @@ function createCourseWorkMaterial(courseId, topicId, title, description, schedul
     "description": description,
     "state": "DRAFT",
     "scheduledTime": scheduledTime,
+    "materials": [],
     "topicId": topicId
   }
 
-  if (fileId) {
-    resource["materials"] = [{
-      "driveFile": {
-        "driveFile": { "id": fileId }
-      }
-    }]
+  for (const attachment of attachments) {
+    if (attachment.match(/^https?:/)) {
+      resource.materials.push({
+        "link": {
+          "url": attachment
+        }
+      });
+    }
+    else {
+      resource.materials.push({
+        "driveFile": {
+          "driveFile": { "id": attachment }
+        }
+      });
+    }
   }
 
   const response = Classroom.Courses.CourseWorkMaterials.create(resource, courseId);
   console.log("Material created: %s", title);
+  return response;
 }
 
 
 /**
  * 課題の作成
  */
-function createCourseWork(courseId, topicId, title, description, dueDate, scheduledDate, fileId = null) {
+function createCourseWork(courseId, topicId, title, description, dueDate, scheduledDate, attachments = []) {
 
   const year = dueDate.getUTCFullYear();
   const month = dueDate.getUTCMonth() + 1; // Month は 0-11
@@ -394,19 +405,30 @@ function createCourseWork(courseId, topicId, title, description, dueDate, schedu
       "minutes": minutes
     },
     "scheduledTime": scheduledTime,
+    "materials": [],
     "topicId": topicId
   }
 
-  if (fileId) {
-    resource["materials"] = [{
-      "driveFile": {
-        "driveFile": { "id": fileId }
-      }
-    }]
+  for (const attachment of attachments) {
+    if (attachment.match(/^https?:/)) {
+      resource.materials.push({
+        "link": {
+          "url": attachment
+        }
+      });
+    }
+    else {
+      resource.materials.push({
+        "driveFile": {
+          "driveFile": { "id": attachment }
+        }
+      });
+    }
   }
 
   const response = Classroom.Courses.CourseWork.create(resource, courseId);
   console.log("Assignment created: %s", title);
+  return response;
 }
 
 
