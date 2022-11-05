@@ -138,7 +138,8 @@ function createNewLesson() {
     const courseId = sheet.getRange(row, 3).getValue();
     const startTime = sheet.getRange(row, 2).getDisplayValue();
 
-    console.log("Course: %s (%s)", courseName, courseId);
+    // 進捗状況の報告
+    Browser.msgBox("クラス「" + courseName + "」（" + courseId + "）に授業を作成します。");
 
     // 予約投稿時間は授業開始 10 分前
     const scheduledDate = new Date(lessonDate + " " + startTime);
@@ -170,7 +171,7 @@ function createNewLesson() {
     createAttendance(courseId, topicId, attendanceDue, scheduledDate, lessonFolder);
   }
 
-  Browser.msgBox("第 " + lessonNumber + " 回　" + lessonTitle + "　（" + lessonDate + "）の作成が完了しました！");
+  Browser.msgBox("授業「" + lessonNumber + " - " + lessonTitle + "」の作成が完了しました！");
 }
 
 
