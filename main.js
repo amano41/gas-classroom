@@ -125,6 +125,19 @@ function createNewLesson() {
     return
   }
 
+  // 実行の確認
+  const confirm = Browser.msgBox(
+    "実行の確認",
+    "以下の設定で授業を作成します。よろしいですか？\\n\\n" +
+    "授業名：　" + lessonNumber + " - " + lessonTitle + "\\n" +
+    "実施日：　" + lessonDate + "\\n\\n" +
+    "作成数：　" + (lastRow - COURSES_LIST_ROW + 1) + " クラス",
+    Browser.Buttons.YES_NO);
+  if (confirm !== "yes") {
+    Browser.msgBox("キャンセルしました。");
+    return;
+  }
+
   // 授業回の教材フォルダ
   const lessonFolder = getFolderByPath(lessonNumber, getMaterialsFolder());
 
