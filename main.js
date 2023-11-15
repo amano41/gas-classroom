@@ -11,6 +11,7 @@ function onOpen() {
   menu.addItem("クラス一覧の更新", "listActiveCourses");
   menu.addSeparator();
   menu.addItem("未提出ファイルの掃除", "removeUnsubmittedFiles");
+  menu.addItem("提出物ファイルのリネーム", "renameSubmittedFiles");
   menu.addToUi();
 }
 
@@ -753,5 +754,137 @@ function removeEditors(targetFolder, targetFolderPath, targetEditors) {
     let folder = folders.next();
     let folderPath = targetFolderPath + "/" + folder.getName();
     removeEditors(folder, folderPath, targetEditors);
+  }
+}
+
+
+/**
+ * 提出物ファイルをリネームする
+ */
+function renameSubmittedFiles() {
+
+  const confirm = Browser.msgBox(
+    "提出物ファイルのリネーム", "実行してもよろしいですか？", Browser.Buttons.YES_NO
+  );
+
+  if (confirm !== "yes") {
+    console.log("Canceled.");
+    return;
+  }
+
+  const sheet = SpreadsheetApp.getActiveSheet();
+
+  // 教師アカウントで実行しているか確認
+  const userEmail = Session.getActiveUser().getEmail();
+  const myEmail = sheet.getRange(MY_EMAIL_ROW, 2).getValue();
+  if (userEmail !== myEmail) {
+    Browser.msgBox("教師アカウントでログインしていません。\\n\\n" + userEmail);
+    return;
+  }
+
+  // クラス一覧が取得されているか確認
+  const lastRow = sheet.getLastRow();
+  if (lastRow < COURSES_LIST_ROW) {
+    Browser.msgBox("クラス情報がありません。\\nメニューから［クラス一覧の取得］を実行してください。");
+    return;
+  }
+
+  // クラス一覧を順番に処理
+  for (let row = COURSES_LIST_ROW; row < lastRow + 1; row++) {
+
+    const courseId = sheet.getRange(row, 3).getValue();
+    const courseWorks = listCourseWorks(courseId);
+
+    for (courseWork of courseWorks) {
+
+      // 種類が「課題」でなければ飛ばす
+      if (courseWork.workType !== "ASSIGNMENT") {
+        continue;
+      }
+
+      // 状態が「公開」でなければ飛ばす
+      if (courseWork.state !== "PUBLISHED") {
+        continue;
+      }
+
+      // 提出期限前であれば飛ばす
+      today = new Date();
+      dueDate = new Date(courseWork.dueDate.year, courseWork.dueDate.month - 1, courseWork.dueDate.day);
+      if (today.getTime() <= dueDate.getTime()) {
+        continue;
+      }
+
+      // 提出物ファイルの先頭に学籍番号をつける
+      ensureStudentIdPrefix(courseId, courseWork.id);
+    }
+  }
+}
+
+
+/**
+ * 提出物のファイル名の先頭に学籍番号がつくようにリネームする
+ */
+function ensureStudentIdPrefix(courseId, courseWorkId) {
+
+  const submissions = listSubmissions(courseId, courseWorkId);
+
+  for (const submission of submissions) {
+
+    // 状態が「提出済み」でなければ飛ばす
+    if (submission.state !== "TURNED_IN") {
+      continue;
+    }
+
+    // 種類が「課題」でなければ飛ばす
+    if (submission.courseWorkType !== "ASSIGNMENT") {
+      continue;
+    }
+
+    // assignmentSubmission は courseWorkType === "ASSIGNMENT" の場合のみ有効
+    const attachments = submission.assignmentSubmission.attachments;
+
+    // ファイルが添付されていなければ飛ばす
+    if (!attachments || attachments.length === 0) {
+      continue;
+    }
+
+    // ファイル名をひとつずつ確認
+    for (const attachment of attachments) {
+      if ("driveFile" in attachment) {
+
+        const fileName = attachment.driveFile.title;
+        let newFileName = null;
+
+        // 命名規則に従っていれば飛ばす
+        if (fileName.match(/^ne\d{6}_/)) {
+          continue;
+        }
+
+        const userId = submission.userId;
+        const userName = Classroom.Courses.Students.get(courseId, userId).profile.name.fullName;
+
+        const match = fileName.match(/^(ne|NE)(\d{2})-?(\d{4})[A-Za-z]?(_| )(.+)$/);
+        if (match) {
+          newFileName = "ne" + match[2] + match[3] + "_" + match[5];
+        }
+        else {
+          const studentId = userName.replace(/^(ne|NE)(\d{2})-?(\d{4}).+$/, "ne$2$3");
+          newFileName = studentId + "_" + fileName;
+        }
+
+        const fileId = attachment.driveFile.id;
+        const file = DriveApp.getFileById(fileId);
+
+        // 念のためファイル名が一致するか確認してからリネーム
+        if (file.getName() === fileName) {
+          //file.setName(newFileName);
+          console.log(userName + " : " + fileName + " ==> " + newFileName);
+        }
+        else {
+          console.error("File name does not match.");
+          console.error(userName + " : " + fileName + " vs. " + file.getName());
+        }
+      }
+    }
   }
 }
