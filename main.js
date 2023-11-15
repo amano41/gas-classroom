@@ -8,40 +8,131 @@ function onOpen() {
   const menu = ui.createMenu("授業管理");
   menu.addItem("授業回の追加", "createNewLesson");
   menu.addSeparator();
-  menu.addItem("クラス一覧の更新", "listAllCourses");
+  menu.addItem("クラス一覧の更新", "listActiveCourses");
   menu.addSeparator();
   menu.addItem("未提出ファイルの掃除", "removeUnsubmittedFiles");
   menu.addToUi();
 }
 
 
-function debug_listCourses(states = ["ACTIVE"]) {
-  const response = Classroom.Courses.list({ "courseStates": states });
-  for (const course of response.courses) {
-    console.log("course: %s (%s)", course.name, course.id);
+function debug_listCourses() {
+  const courses = listCourses();
+  for (const course of courses) {
+    console.log("course: %s %s (%s)", course.name, course.section, course.id);
   }
 }
 
 
-function debug_listTopics(courseId) {
-  const response = Classroom.Courses.Topics.list(courseId);
-  for (const topic of response.topic) {
+function debug_listTopics() {
+  const courseId = "xxxxxxxxxxxx";
+  const topics = listTopics(courseId);
+  for (const topic of topics) {
     console.log("topic: %s (%s)", topic.name, topic.topicId);
   }
 }
 
 
-/**
- * クラス一覧を取得
- */
-function listAllCourses() {
-
-  const optionalArgs = {
-    courseStates: ["ACTIVE"]
+function debug_listCourseWorks() {
+  const courseId = "xxxxxxxxxxxx";
+  const courseWorks = listCourseWorks(courseId);
+  for (const courseWork of courseWorks) {
+    console.log("coursework: %s (%s)", courseWork.title, courseWork.id);
   }
+}
 
+
+function debug_listSubmissions() {
+  const courseId = "xxxxxxxxxxxx";
+  const courseWorkId = "xxxxxxxxxxxx";
+  const submissions = listSubmissions(courseId, courseWorkId);
+  for (const submission of submissions) {
+    if (submission.courseWorkType !== "ASSIGNMENT") {
+      continue;
+    }
+    if (submission.state !== "TURNED_IN") {
+      continue;
+    }
+    console.log("submission: %s [%s]", submission.id, submission.alternateLink);
+  }
+}
+
+
+/**
+ * クラスの一覧を取得
+ */
+function listCourses(courseStates = ["ACTIVE"], pageToken = null) {
+  const optionalArgs = {
+    courseStates: courseStates,
+    pageToken: pageToken
+  }
   const response = Classroom.Courses.list(optionalArgs);
-  const courses = response.courses;
+  if (response.nextPageToken) {
+    return response.courses.concat(listCourses(response.nextPageToken));
+  }
+  else {
+    return response.courses;
+  }
+}
+
+
+/**
+ * トピックの一覧を取得
+ */
+function listTopics(courseId, pageToken = null) {
+  const optionalArgs = {
+    pageToken: pageToken
+  }
+  const response = Classroom.Courses.Topics.list(courseId, optionalArgs);
+  if (response.nextPageToken) {
+    return response.topic.concat(listTopics(courseId, response.nextPageToken));
+  }
+  else {
+    return response.topic;
+  }
+}
+
+
+
+/**
+ * 課題の一覧を取得
+ */
+function listCourseWorks(courseId, pageToken = null) {
+  const optionalArgs = {
+    pageToken: pageToken
+  }
+  const response = Classroom.Courses.CourseWork.list(courseId, optionalArgs);
+  if (response.nextPageToken) {
+    return response.courseWork.concat(listCourseWorks(courseId, response.nextPageToken));
+  }
+  else {
+    return response.courseWork;
+  }
+}
+
+
+/**
+ * 提出物の一覧を取得
+ */
+function listSubmissions(courseId, courseWorkId, pageToken = null) {
+  const optionalArgs = {
+    pageToken: pageToken
+  }
+  const response = Classroom.Courses.CourseWork.StudentSubmissions.list(courseId, courseWorkId, optionalArgs);
+  if (response.nextPageToken) {
+    return response.studentSubmissions.concat(listSubmissions(courseId, courseWorkId, response.nextPageToken));
+  }
+  else {
+    return response.studentSubmissions;
+  }
+}
+
+
+/**
+ * 開講中のクラス一覧を取得
+ */
+function listActiveCourses() {
+
+  const courses = listCourses();
   if (!courses || courses.length === 0) {
     Browser.msgBox("クラスがありません。");
     return;
