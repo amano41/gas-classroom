@@ -731,14 +731,14 @@ function removeUnsubmittedFiles() {
  */
 function removeEditors(targetFolder, targetFolderPath, targetEditors) {
 
-  console.info(targetFolderPath);
+  console.log(targetFolderPath);
 
   // 自分以外がオーナーで自分に編集権限があるファイルを処理
   let files = targetFolder.searchFiles('not ("me" in owners)');
   while (files.hasNext()) {
 
     let file = files.next();
-    console.info("\t" + file.getName());
+    console.log(file.getName());
 
     let editors = file.getEditors();
     for (let i in editors) {
