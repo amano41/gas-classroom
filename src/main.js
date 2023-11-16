@@ -883,8 +883,12 @@ function ensureStudentIdPrefix(courseId, courseWorkId) {
           console.log(userName + " : " + fileName + " ==> " + newFileName);
         }
         else {
-          console.error("File name does not match.");
-          console.error(userName + " : " + fileName + " vs. " + file.getName());
+          Browser.msgBox(
+            "ファイル名が一致しません。" + "\\n\\n" +
+            "学生名：" + userName + "\\n" +
+            "ファイル名（提出物）：" + fileName + "\\n" +
+            "ファイル名（ドライブ）：" + file.getName()
+          );
         }
       }
     }
