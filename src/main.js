@@ -61,14 +61,14 @@ function debug_listSubmissions() {
 /**
  * クラスの一覧を取得
  */
-function listCourses(courseStates = ["ACTIVE"], pageToken = null) {
+function listCourses(states = ["ACTIVE"], pageToken = null) {
   const optionalArgs = {
-    courseStates: courseStates,
+    courseStates: states,
     pageToken: pageToken
   }
   const response = Classroom.Courses.list(optionalArgs);
   if (response.nextPageToken) {
-    return response.courses.concat(listCourses(response.nextPageToken));
+    return response.courses.concat(listCourses(states, response.nextPageToken));
   }
   else {
     return response.courses;
@@ -97,13 +97,14 @@ function listTopics(courseId, pageToken = null) {
 /**
  * 課題の一覧を取得
  */
-function listCourseWorks(courseId, pageToken = null) {
+function listCourseWorks(courseId, states = ["PUBLISHED"], pageToken = null) {
   const optionalArgs = {
+    courseWorkStates: states,
     pageToken: pageToken
   }
   const response = Classroom.Courses.CourseWork.list(courseId, optionalArgs);
   if (response.nextPageToken) {
-    return response.courseWork.concat(listCourseWorks(courseId, response.nextPageToken));
+    return response.courseWork.concat(listCourseWorks(courseId, states, response.nextPageToken));
   }
   else {
     return response.courseWork;
@@ -114,13 +115,14 @@ function listCourseWorks(courseId, pageToken = null) {
 /**
  * 提出物の一覧を取得
  */
-function listSubmissions(courseId, courseWorkId, pageToken = null) {
+function listSubmissions(courseId, courseWorkId, states = ["TURNED_IN"], pageToken = null) {
   const optionalArgs = {
+    states: states,
     pageToken: pageToken
   }
   const response = Classroom.Courses.CourseWork.StudentSubmissions.list(courseId, courseWorkId, optionalArgs);
   if (response.nextPageToken) {
-    return response.studentSubmissions.concat(listSubmissions(courseId, courseWorkId, response.nextPageToken));
+    return response.studentSubmissions.concat(listSubmissions(courseId, courseWorkId, states, response.nextPageToken));
   }
   else {
     return response.studentSubmissions;
