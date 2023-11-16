@@ -879,7 +879,7 @@ function ensureStudentIdPrefix(courseId, courseWorkId) {
 
         // 念のためファイル名が一致するか確認してからリネーム
         if (file.getName() === fileName) {
-          //file.setName(newFileName);
+          file.setName(newFileName);
           console.log(userName + " : " + fileName + " ==> " + newFileName);
         }
         else {
