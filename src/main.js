@@ -581,6 +581,8 @@ function createCourseWork(courseId, topicId, title, description, dueDate, schedu
   const day = dueDate.getUTCDate();
   const hours = dueDate.getUTCHours();
   const minutes = dueDate.getUTCMinutes();
+  const seconds = dueDate.getUTCSeconds();
+  const nanos = dueDate.getUTCMilliseconds() * 1000000;
   const scheduledTime = Utilities.formatDate(scheduledDate, "UTC", "yyyy-MM-dd'T'HH:mm:ss'Z'")
 
   const resource = {
@@ -595,7 +597,9 @@ function createCourseWork(courseId, topicId, title, description, dueDate, schedu
     },
     "dueTime": {
       "hours": hours,
-      "minutes": minutes
+      "minutes": minutes,
+      "seconds": seconds,
+      "nanos": nanos
     },
     "scheduledTime": scheduledTime,
     "materials": [],
@@ -791,6 +795,9 @@ function renameSubmittedFiles() {
     return;
   }
 
+  // 時刻を無視して今日の日付を取得する
+  const nowDate = new Date(new Date().toDateString());
+
   // クラス一覧を順番に処理
   for (let row = COURSES_LIST_ROW; row < lastRow + 1; row++) {
 
@@ -810,9 +817,8 @@ function renameSubmittedFiles() {
       }
 
       // 提出期限前であれば飛ばす
-      today = new Date();
-      dueDate = new Date(courseWork.dueDate.year, courseWork.dueDate.month - 1, courseWork.dueDate.day);
-      if (today.getTime() <= dueDate.getTime()) {
+      const dueDate = new Date(courseWork.dueDate.year, courseWork.dueDate.month - 1, courseWork.dueDate.day);
+      if (nowDate.getTime() <= dueDate.getTime()) {
         continue;
       }
 
