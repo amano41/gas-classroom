@@ -12,6 +12,8 @@ function onOpen() {
   menu.addSeparator();
   menu.addItem("未提出ファイルの掃除", "removeUnsubmittedFiles");
   menu.addItem("提出物ファイルのリネーム", "renameSubmittedFiles");
+  menu.addSeparator();
+  menu.addItem("遅刻提出一覧の作成", "listLateSubmissions");
   menu.addToUi();
 }
 
@@ -895,6 +897,91 @@ function ensureStudentIdPrefix(courseId, courseWorkId) {
             "ファイル名（提出物）：" + fileName + "\\n" +
             "ファイル名（ドライブ）：" + file.getName()
           );
+        }
+      }
+    }
+  }
+}
+
+
+/**
+ * 遅刻提出の一覧を作成
+ */
+function listLateSubmissions() {
+
+  const confirm = Browser.msgBox(
+    "遅刻提出の一覧を作成", "実行してもよろしいですか？", Browser.Buttons.YES_NO
+  );
+
+  if (confirm !== "yes") {
+    console.log("Canceled.");
+    return;
+  }
+
+  const sheet = SpreadsheetApp.getActiveSheet();
+
+  // 教師アカウントで実行しているか確認
+  const userEmail = Session.getActiveUser().getEmail();
+  const myEmail = sheet.getRange(MY_EMAIL_ROW, 2).getValue();
+  if (userEmail !== myEmail) {
+    Browser.msgBox("教師アカウントでログインしていません。\\n\\n" + userEmail);
+    return;
+  }
+
+  // クラス一覧が取得されているか確認
+  const lastRow = sheet.getLastRow();
+  if (lastRow < COURSES_LIST_ROW) {
+    Browser.msgBox("クラス情報がありません。\\nメニューから［クラス一覧の取得］を実行してください。");
+    return;
+  }
+
+  const spreadSheet = SpreadsheetApp.getActiveSpreadsheet();
+  const resultSheet = spreadSheet.insertSheet("遅刻提出一覧");
+
+  // ヘッダー行
+  resultSheet.appendRow(["授業", "時限", "課題", "学生", "提出期限", "提出日", "遅刻日数"]);
+
+  // クラス一覧を順番に処理
+  for (let row = COURSES_LIST_ROW; row < lastRow + 1; row++) {
+
+    const courseId = sheet.getRange(row, 3).getValue();
+    const course = Classroom.Courses.get(courseId);
+
+    const courseWorks = listCourseWorks(courseId);
+    for (const courseWork of courseWorks) {
+
+      // 提出期限
+      const dueDate = new Date(courseWork.dueDate.year, courseWork.dueDate.month - 1, courseWork.dueDate.day);
+
+      const submissions = listSubmissions(courseId, courseWork.id);
+      for (const submission of submissions) {
+
+        // 状態が「提出済み」でなければ飛ばす
+        if (submission.state !== "TURNED_IN") {
+          continue;
+        }
+
+        // 最終更新日（提出日）
+        const updateDate = new Date(new Date(submission.updateTime).toDateString());
+
+        // 最終更新日が提出期限より後であれば出力する
+        const lateDays = Math.trunc((updateDate - dueDate) / (1000 * 60 * 60 * 24));
+        if (lateDays > 0) {
+
+          const student = Classroom.Courses.Students.get(courseId, submission.userId);
+
+          const row = [
+            course.name,
+            course.section,
+            courseWork.title,
+            student.profile.name.fullName,
+            dueDate.toLocaleDateString(),
+            updateDate.toLocaleDateString(),
+            lateDays
+          ];
+
+          resultSheet.appendRow(row);
+          console.log(row);
         }
       }
     }
