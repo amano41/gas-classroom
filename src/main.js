@@ -14,6 +14,7 @@ function onOpen() {
   menu.addItem("提出物ファイルのリネーム", "renameSubmittedFiles");
   menu.addSeparator();
   menu.addItem("遅刻提出一覧の作成", "listLateSubmissions");
+  menu.addItem("未提出一覧の作成", "listUnsubmittedAssignments");
   menu.addToUi();
 }
 
@@ -983,6 +984,81 @@ function listLateSubmissions() {
           resultSheet.appendRow(row);
           console.log(row);
         }
+      }
+    }
+  }
+}
+
+
+/**
+ * 未提出の一覧を作成
+ */
+function listUnsubmittedAssignments() {
+
+  const confirm = Browser.msgBox(
+    "未提出の一覧を作成", "実行してもよろしいですか？", Browser.Buttons.YES_NO
+  );
+
+  if (confirm !== "yes") {
+    console.log("Canceled.");
+    return;
+  }
+
+  const sheet = SpreadsheetApp.getActiveSheet();
+
+  // 教師アカウントで実行しているか確認
+  const userEmail = Session.getActiveUser().getEmail();
+  const myEmail = sheet.getRange(MY_EMAIL_ROW, 2).getValue();
+  if (userEmail !== myEmail) {
+    Browser.msgBox("教師アカウントでログインしていません。\\n\\n" + userEmail);
+    return;
+  }
+
+  // クラス一覧が取得されているか確認
+  const lastRow = sheet.getLastRow();
+  if (lastRow < COURSES_LIST_ROW) {
+    Browser.msgBox("クラス情報がありません。\\nメニューから［クラス一覧の取得］を実行してください。");
+    return;
+  }
+
+  const spreadSheet = SpreadsheetApp.getActiveSpreadsheet();
+  const resultSheet = spreadSheet.insertSheet("未提出一覧");
+
+  // 未提出とみなすステータス
+  const unsubmittedStates = ["NEW", "CREATED", "RECLAIMED_BY_STUDENT", "RETURNED"];
+
+  // ヘッダー行
+  resultSheet.appendRow(["授業", "時限", "課題", "学生", "状態"]);
+
+  // クラス一覧を順番に処理
+  for (let row = COURSES_LIST_ROW; row < lastRow + 1; row++) {
+
+    const courseId = sheet.getRange(row, 3).getValue();
+    const course = Classroom.Courses.get(courseId);
+
+    const courseWorks = listCourseWorks(courseId);
+    for (const courseWork of courseWorks) {
+
+      const submissions = listSubmissions(courseId, courseWork.id, unsubmittedStates);
+      for (const submission of submissions) {
+
+        // 状態が「提出済み」の場合は飛ばす
+        if (submission.state === "TURNED_IN") {
+          continue;
+        }
+
+        const student = Classroom.Courses.Students.get(courseId, submission.userId);
+
+        const row = [
+          course.name,
+          course.section,
+          courseWork.title,
+          student.profile.name.fullName,
+          submission.state
+        ];
+
+        resultSheet.appendRow(row);
+        console.log(row);
       }
     }
   }
