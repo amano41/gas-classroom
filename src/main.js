@@ -144,7 +144,9 @@ function listActiveCourses() {
     return;
   }
 
-  const sheet = SpreadsheetApp.getActiveSheet();
+  const spreadSheet = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = spreadSheet.getSheetByName("授業管理");
+
   const myEmail = sheet.getRange(MY_EMAIL_ROW, 2).getValue();
   if (myEmail === "") {
     Browser.msgBox("Email が入力されていません。");
@@ -178,7 +180,8 @@ function listActiveCourses() {
  */
 function createNewLesson() {
 
-  const sheet = SpreadsheetApp.getActiveSheet();
+  const spreadSheet = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = spreadSheet.getSheetByName("授業管理");
 
   // クラス一覧が取得されているか確認
   const lastRow = sheet.getLastRow();
@@ -516,7 +519,8 @@ function getFileIdByPath(filePath, baseFolder = null) {
  * 教材フォルダを取得
  */
 function getMaterialsFolder() {
-  const sheet = SpreadsheetApp.getActiveSheet();
+  const spreadSheet = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = spreadSheet.getSheetByName("授業管理");
   const materialsFolderId = sheet.getRange(MATERIALS_FOLDER_ROW, 2).getValue();
   return DriveApp.getFolderById(materialsFolderId);
 }
@@ -685,7 +689,8 @@ function removeUnsubmittedFiles() {
     return;
   }
 
-  const sheet = SpreadsheetApp.getActiveSheet();
+  const spreadSheet = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = spreadSheet.getSheetByName("授業管理");
 
   // 教師アカウントで実行しているか確認
   const userEmail = Session.getActiveUser().getEmail();
@@ -781,7 +786,8 @@ function renameSubmittedFiles() {
     return;
   }
 
-  const sheet = SpreadsheetApp.getActiveSheet();
+  const spreadSheet = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = spreadSheet.getSheetByName("授業管理");
 
   // 教師アカウントで実行しているか確認
   const userEmail = Session.getActiveUser().getEmail();
@@ -919,7 +925,8 @@ function listLateSubmissions() {
     return;
   }
 
-  const sheet = SpreadsheetApp.getActiveSheet();
+  const spreadSheet = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = spreadSheet.getSheetByName("授業管理");
 
   // 教師アカウントで実行しているか確認
   const userEmail = Session.getActiveUser().getEmail();
@@ -1004,7 +1011,8 @@ function listUnsubmittedAssignments() {
     return;
   }
 
-  const sheet = SpreadsheetApp.getActiveSheet();
+  const spreadSheet = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = spreadSheet.getSheetByName("授業管理");
 
   // 教師アカウントで実行しているか確認
   const userEmail = Session.getActiveUser().getEmail();
