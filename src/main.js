@@ -1038,6 +1038,9 @@ function listUnsubmittedAssignments() {
   // ヘッダー行
   resultSheet.appendRow(["授業", "時限", "課題", "学生", "状態"]);
 
+  // 時刻を無視して今日の日付を取得する
+  const nowDate = new Date(new Date().toDateString());
+
   // クラス一覧を順番に処理
   for (let row = COURSES_LIST_ROW; row < lastRow + 1; row++) {
 
@@ -1046,6 +1049,12 @@ function listUnsubmittedAssignments() {
 
     const courseWorks = listCourseWorks(courseId);
     for (const courseWork of courseWorks) {
+
+      // 提出期限前であれば飛ばす
+      const dueDate = new Date(courseWork.dueDate.year, courseWork.dueDate.month - 1, courseWork.dueDate.day);
+      if (nowDate.getTime() <= dueDate.getTime()) {
+        continue;
+      }
 
       const submissions = listSubmissions(courseId, courseWork.id, unsubmittedStates);
       for (const submission of submissions) {
