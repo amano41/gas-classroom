@@ -943,8 +943,8 @@ function listLateSubmissions() {
     return;
   }
 
-  const spreadSheet = SpreadsheetApp.getActiveSpreadsheet();
-  const resultSheet = spreadSheet.insertSheet("遅刻提出一覧");
+  const resultSheet = spreadSheet.getSheetByName("遅刻提出一覧") || spreadSheet.insertSheet("遅刻提出一覧");
+  resultSheet.clear()
 
   // ヘッダー行
   resultSheet.appendRow(["授業", "時限", "課題", "学生", "提出期限", "提出日", "遅刻日数"]);
@@ -1029,8 +1029,8 @@ function listUnsubmittedAssignments() {
     return;
   }
 
-  const spreadSheet = SpreadsheetApp.getActiveSpreadsheet();
-  const resultSheet = spreadSheet.insertSheet("未提出一覧");
+  const resultSheet = spreadSheet.getSheetByName("未提出一覧") || spreadSheet.insertSheet("未提出一覧");
+  resultSheet.clear()
 
   // 未提出とみなすステータス
   const unsubmittedStates = ["NEW", "CREATED", "RECLAIMED_BY_STUDENT", "RETURNED"];
