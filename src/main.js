@@ -74,7 +74,7 @@ function listCourses(states = ["ACTIVE"], pageToken = null) {
     return response.courses.concat(listCourses(states, response.nextPageToken));
   }
   else {
-    return response.courses;
+    return response.courses || [];
   }
 }
 
@@ -91,7 +91,7 @@ function listTopics(courseId, pageToken = null) {
     return response.topic.concat(listTopics(courseId, response.nextPageToken));
   }
   else {
-    return response.topic;
+    return response.topic || [];
   }
 }
 
@@ -110,7 +110,7 @@ function listCourseWorks(courseId, states = ["PUBLISHED"], pageToken = null) {
     return response.courseWork.concat(listCourseWorks(courseId, states, response.nextPageToken));
   }
   else {
-    return response.courseWork;
+    return response.courseWork || [];
   }
 }
 
@@ -128,7 +128,7 @@ function listSubmissions(courseId, courseWorkId, states = ["TURNED_IN"], pageTok
     return response.studentSubmissions.concat(listSubmissions(courseId, courseWorkId, states, response.nextPageToken));
   }
   else {
-    return response.studentSubmissions;
+    return response.studentSubmissions || [];
   }
 }
 
